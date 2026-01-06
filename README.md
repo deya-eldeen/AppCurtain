@@ -2,6 +2,8 @@
 
 ![Demo](demo.gif)
 
+> Warning: This library is in a very early phase and is not ready for production use.
+
 AppCurtain is a small iOS helper that shows a privacy curtain (blur or mask) when
 your app leaves the foreground, and removes it when the app becomes active again.
 
