@@ -25,7 +25,7 @@ In Xcode: File → Add Packages…, then paste:
 https://github.com/deya-eldeen/AppCurtain
 ```
 
-Select a version or branch (use `main` if you have no releases yet).
+Select a version or branch (use `master` if you have no releases yet).
 
 ## Usage
 
