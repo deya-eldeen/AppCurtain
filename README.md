@@ -2,7 +2,7 @@
 
 ![Demo](demo.gif)
 
-> Warning: This library is in a very early phase and is not ready for production use.
+> Warning: This library is in a very early phase and is not ready for production use yet.
 
 AppCurtain is a small iOS helper that shows a privacy curtain (blur or mask) when
 your app leaves the foreground, and removes it when the app becomes active again.
@@ -16,6 +16,16 @@ your app leaves the foreground, and removes it when the app becomes active again
 ## Installation
 
 Use Swift Package Manager to add the package to your app.
+
+### Swift Package Manager (SPM)
+
+In Xcode: File → Add Packages…, then paste:
+
+```
+https://github.com/deya-eldeen/AppCurtain
+```
+
+Select a version or branch (use `main` if you have no releases yet).
 
 ## Usage
 
