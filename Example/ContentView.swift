@@ -3,7 +3,6 @@ import UIKit
 import AppCurtain
 
 struct ContentView: View {
-    @State private var isRotating = false
     @State private var lockStyle: CurtainStyle = .blur
     @State private var minimizeStyle: CurtainStyle = .blur
     @State private var curtainTitle = "Payment Screen\n3 fields to completion!"
@@ -30,12 +29,6 @@ struct ContentView: View {
 
                 Text("Background the app to see the privacy curtain.")
                     .multilineTextAlignment(.center)
-
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.green)
-                    .frame(width: 120, height: 120)
-                    .rotationEffect(.degrees(isRotating ? 360 : 0))
-                    .animation(.linear(duration: 6).repeatForever(autoreverses: false), value: isRotating)
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Lock effect")
@@ -74,8 +67,8 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("What you can try:")
                         .font(.headline)
-                    Text("• Lock the simulator to trigger the blur.")
-                    Text("• Switch apps to confirm the privacy curtain.")
+                    Text("• Lock the simulator to trigger the lock effect.")
+                    Text("• Switch apps to see the privacy curtain.")
                     Text("• Change the style with the picker above.")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -84,7 +77,6 @@ struct ContentView: View {
             .padding()
         }
         .onAppear {
-            isRotating = true
             applyStyles()
         }
         .onChange(of: lockStyle) { _ in
