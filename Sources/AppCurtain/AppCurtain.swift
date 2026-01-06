@@ -33,10 +33,17 @@ public protocol AppCurtainOverlayAnimating: AnyObject {
 public final class AppCurtain {
     public static let shared = AppCurtain()
 
-    private var style: AppCurtainStyle = .blur(.systemChromeMaterial)
+    private enum AppCurtainTrigger {
+        case lock
+        case minimize
+    }
+
+    private var lockStyle: AppCurtainStyle = .blur(.systemChromeMaterial)
+    private var minimizeStyle: AppCurtainStyle = .blur(.systemChromeMaterial)
     private var windowProvider: @MainActor () -> UIWindow? = AppCurtain.defaultWindowProvider
     private var observerTokens: [NSObjectProtocol] = []
     private weak var overlayView: UIView?
+    private var lastTrigger: AppCurtainTrigger?
 
     public init() {}
 
@@ -45,8 +52,18 @@ public final class AppCurtain {
         style: AppCurtainStyle = .blur(.systemChromeMaterial),
         windowProvider: @escaping @MainActor () -> UIWindow? = AppCurtain.defaultWindowProvider
     ) {
+        start(lockStyle: style, minimizeStyle: style, windowProvider: windowProvider)
+    }
+
+    /// Begins observing app state changes with separate styles for lock and minimize.
+    public func start(
+        lockStyle: AppCurtainStyle = .blur(.systemChromeMaterial),
+        minimizeStyle: AppCurtainStyle = .blur(.systemChromeMaterial),
+        windowProvider: @escaping @MainActor () -> UIWindow? = AppCurtain.defaultWindowProvider
+    ) {
         stop()
-        self.style = style
+        self.lockStyle = lockStyle
+        self.minimizeStyle = minimizeStyle
         self.windowProvider = windowProvider
 
         let center = NotificationCenter.default
@@ -57,7 +74,7 @@ public final class AppCurtain {
                 queue: .main
             ) { [weak self] _ in
                 Task { @MainActor in
-                    self?.showCurtain()
+                    self?.showCurtain(for: .minimize)
                 }
             },
             center.addObserver(
@@ -66,7 +83,16 @@ public final class AppCurtain {
                 queue: .main
             ) { [weak self] _ in
                 Task { @MainActor in
-                    self?.showCurtain()
+                    self?.showCurtainIfAllowed(for: .minimize)
+                }
+            },
+            center.addObserver(
+                forName: UIApplication.protectedDataWillBecomeUnavailableNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.showCurtain(for: .lock)
                 }
             },
             center.addObserver(
@@ -101,11 +127,16 @@ public final class AppCurtain {
 
     /// Updates the curtain style and refreshes it if currently visible.
     public func updateStyle(_ style: AppCurtainStyle) {
-        self.style = style
-        if overlayView != nil {
-            hideCurtain()
-            showCurtain()
-        }
+        self.lockStyle = style
+        self.minimizeStyle = style
+        refreshVisibleCurtain()
+    }
+
+    /// Updates the styles for lock and minimize events.
+    public func updateStyles(lockStyle: AppCurtainStyle, minimizeStyle: AppCurtainStyle) {
+        self.lockStyle = lockStyle
+        self.minimizeStyle = minimizeStyle
+        refreshVisibleCurtain()
     }
 
     /// Resolves a suitable window from connected scenes.
@@ -124,19 +155,26 @@ public final class AppCurtain {
         return scenes.first?.windows.first
     }
 
-    private func showCurtain() {
+    private func showCurtain(for trigger: AppCurtainTrigger) {
         guard let window = windowProvider() else { return }
+
+        let previousTrigger = lastTrigger
+        lastTrigger = trigger
 
         if let overlay = overlayView {
             if overlay.superview !== window {
                 overlay.removeFromSuperview()
                 overlayView = nil
-            } else {
+            } else if previousTrigger == trigger {
                 overlay.frame = window.bounds
                 return
+            } else {
+                overlay.removeFromSuperview()
+                overlayView = nil
             }
         }
 
+        let style = trigger == .lock ? lockStyle : minimizeStyle
         let overlay = style.makeView()
         overlay.frame = window.bounds
         overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -151,6 +189,13 @@ public final class AppCurtain {
         }
     }
 
+    private func showCurtainIfAllowed(for trigger: AppCurtainTrigger) {
+        if trigger == .minimize, lastTrigger == .lock {
+            return
+        }
+        showCurtain(for: trigger)
+    }
+
     private func hideCurtain() {
         guard let overlay = overlayView else { return }
 
@@ -163,5 +208,18 @@ public final class AppCurtain {
             overlay.removeFromSuperview()
             overlayView = nil
         }
+    }
+
+    private func refreshVisibleCurtain() {
+        guard overlayView != nil else { return }
+        removeCurtainImmediately()
+        if let trigger = lastTrigger {
+            showCurtain(for: trigger)
+        }
+    }
+
+    private func removeCurtainImmediately() {
+        overlayView?.removeFromSuperview()
+        overlayView = nil
     }
 }

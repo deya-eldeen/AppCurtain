@@ -4,7 +4,8 @@ import AppCurtain
 
 struct ContentView: View {
     @State private var isRotating = false
-    @State private var selectedStyle: CurtainStyle = .blur
+    @State private var lockStyle: CurtainStyle = .blur
+    @State private var minimizeStyle: CurtainStyle = .blur
     @State private var curtainTitle = "Payment Screen\n3 fields to completion!"
 
     private enum CurtainStyle: String, CaseIterable, Identifiable {
@@ -15,9 +16,13 @@ struct ContentView: View {
         var id: String { rawValue }
     }
 
+    private var lockStyles: [CurtainStyle] {
+        CurtainStyle.allCases.filter { $0 != .stageCurtain }
+    }
+
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: 30) {
 
                 Text("AppCurtain")
                     .font(.largeTitle)
@@ -27,16 +32,29 @@ struct ContentView: View {
                     .multilineTextAlignment(.center)
 
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.blue)
-                    .frame(width: 180, height: 180)
+                    .fill(Color.green)
+                    .frame(width: 120, height: 120)
                     .rotationEffect(.degrees(isRotating ? 360 : 0))
                     .animation(.linear(duration: 6).repeatForever(autoreverses: false), value: isRotating)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Curtain style")
+                    Text("Lock effect")
                         .font(.headline)
 
-                    Picker("Curtain style", selection: $selectedStyle) {
+                    Picker("Lock effect", selection: $lockStyle) {
+                        ForEach(lockStyles) { style in
+                            Text(style.rawValue).tag(style)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Minimize effect")
+                        .font(.headline)
+
+                    Picker("Minimize effect", selection: $minimizeStyle) {
                         ForEach(CurtainStyle.allCases) { style in
                             Text(style.rawValue).tag(style)
                         }
@@ -67,26 +85,39 @@ struct ContentView: View {
         }
         .onAppear {
             isRotating = true
-            applyStyle()
+            applyStyles()
         }
-        .onChange(of: selectedStyle) { _ in
-            applyStyle()
+        .onChange(of: lockStyle) { _ in
+            applyStyles()
+        }
+        .onChange(of: minimizeStyle) { _ in
+            applyStyles()
+        }
+        .onChange(of: curtainTitle) { _ in
+            applyStyles()
         }
     }
 
-    private func applyStyle() {
+    private func applyStyles() {
+        let title = curtainTitle
         Task { @MainActor in
-            switch selectedStyle {
-            case .blur:
-                AppCurtain.shared.updateStyle(.blur(.systemChromeMaterial))
-            case .solidColor:
-                AppCurtain.shared.updateStyle(.custom {
-                    SolidColorCurtainView(color: .darkGray, title: curtainTitle)
-                })
-            case .stageCurtain:
-                AppCurtain.shared.updateStyle(.custom {
-                    StageCurtainView(title: curtainTitle)
-                })
+            let lock = curtainStyle(for: lockStyle, title: title)
+            let minimize = curtainStyle(for: minimizeStyle, title: title)
+            AppCurtain.shared.updateStyles(lockStyle: lock, minimizeStyle: minimize)
+        }
+    }
+
+    private func curtainStyle(for style: CurtainStyle, title: String) -> AppCurtainStyle {
+        switch style {
+        case .blur:
+            return .blur(.systemChromeMaterial)
+        case .solidColor:
+            return .custom {
+                SolidColorCurtainView(color: .darkGray, title: title)
+            }
+        case .stageCurtain:
+            return .custom {
+                StageCurtainView(title: title)
             }
         }
     }
